@@ -92,6 +92,7 @@ $ curl -s -X POST <URL>/ask -H "X-API-Key: $AGENT_API_KEY" -H "X-User-Id: cp5-te
 
 - `screenshots/dashboard.png` — trang quản lý service trên platform
 - `screenshots/health.png` — kết quả gọi `/health` từ trình duyệt hoặc curl
+- `screenshots/docs.png` — kết quả gọi `/docs` từ trình duyệt hoặc curl
 
 ---
 
