@@ -21,14 +21,31 @@
 #            docker images day12-agent:prod     # xem dung lượng
 # ═══════════════════════════════════════════════════════════════════
 
-FROM python:3.11
+# ──── Stage 1: Builder ────
+# Cài dependencies vào /install để stage sau chỉ copy kết quả (không mang
+# theo pip cache, compiler...). requirements.txt copy riêng + cài TRƯỚC khi
+# copy source → sửa 1 dòng code không phải cài lại thư viện (tận dụng cache).
+FROM python:3.11-slim AS builder
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
+# ──── Stage 2: Runtime ────
+FROM python:3.11-slim
 WORKDIR /app
+COPY --from=builder /install /usr/local
+COPY app/ app/
+COPY utils/ utils/
 
-COPY . .
-
-RUN pip install -r requirements.txt
+# Chạy bằng user thường, không phải root → thoát được app cũng không thành root host
+RUN useradd --create-home appuser
+USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Image slim không có curl → healthcheck dùng Python, đọc PORT động
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD python -c "import os, urllib.request; port = os.getenv('PORT', '8000'); urllib.request.urlopen(f'http://127.0.0.1:{port}/health')"
+
+# Shell form để expand ${PORT} khi chạy trên cloud; exec để uvicorn nhận SIGTERM trực tiếp
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

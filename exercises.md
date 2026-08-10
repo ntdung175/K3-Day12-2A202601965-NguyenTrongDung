@@ -42,12 +42,20 @@ docker images | grep agent
 
 | Bản | Dung lượng |
 |-----|-----------|
-| 1 stage (bản đầu) | ... MB |
-| Multi-stage | ... MB |
+| 1 stage (bản đầu) | 1730 MB (1.73 GB) |
+| Multi-stage | 296 MB |
 
 Giải thích: phần dung lượng chênh lệch đó là những gì?
 
-> *Câu trả lời của bạn*
+> Chênh lệch khoảng 1.43 GB đến từ hai nguồn. Thứ nhất là base image: bản 1
+> stage dùng `python:3.11` full (mang theo compiler gcc/g++, git, các thư viện
+> `-dev`, tài liệu và nhiều công cụ hệ thống), còn multi-stage dùng
+> `python:3.11-slim` đã lột sạch những thứ đó. Thứ hai là rác của quá trình
+> build: ở bản 1 stage, pip cache và các gói/công cụ chỉ cần lúc `pip install`
+> vẫn nằm lại trong image cuối; còn multi-stage để chúng ở stage `builder` và
+> chỉ `COPY --from=builder` phần thư viện đã cài sang stage runtime, nên
+> compiler và rác build không lên image production. Image runtime nhỏ hơn ~6
+> lần → deploy nhanh hơn, ít bề mặt tấn công hơn.
 
 ---
 
