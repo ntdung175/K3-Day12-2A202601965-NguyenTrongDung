@@ -7,7 +7,8 @@
 > bằng câu trả lời của bạn.
 > `grade.py` đếm số câu đã trả lời (15 điểm cho 10 câu).
 >
-> Họ và tên: ..........................  Mã học viên: ..........................
+> Họ và tên: Nguyễn Trọng Dũng  
+> Mã học viên: 2A202601965
 
 ---
 
