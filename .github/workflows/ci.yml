@@ -1,0 +1,53 @@
+name: CI
+
+# Chạy khi push và khi mở pull request — bắt lỗi TRƯỚC khi merge
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ── 1. Chạy test ──────────────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # Giá trị giả cho CI — không dùng secret thật ở bước test
+      AGENT_API_KEY: ci-dummy
+      REDIS_URL: "fake://"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Cài dependency
+        run: pip install -r requirements.txt
+      - name: Chạy pytest (bỏ test_cp5 cần deploy sống và test docker chậm)
+        run: pytest tests/test_cp1.py tests/test_cp2.py tests/test_cp3.py tests/test_cp4.py -v -m "not docker"
+
+  # ── 2. Build thử Docker image trên runner sạch ────────────
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t day12-agent:ci .
+
+  # ── 3. Deploy — chỉ chạy khi test + build xanh VÀ push vào main ──
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [ test, build ]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger deploy trên Render
+        env:
+          # Deploy hook lấy từ Settings → Secrets, không viết thẳng vào file
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$RENDER_DEPLOY_HOOK" ]; then
+            curl -fsSL -X POST "$RENDER_DEPLOY_HOOK"
+            echo "Đã gọi deploy hook của Render."
+          else
+            echo "Chưa đặt secret RENDER_DEPLOY_HOOK — Render tự auto-deploy khi push vào main."
+          fi
